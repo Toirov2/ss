@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shaxsiy Kabinet - SavdoGo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans">
+    <!-- Navbar -->
+    <nav class="bg-purple-600 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">Shaxsiy Kabinet</h1>
+            <div class="flex items-center space-x-4">
+                <select id="language" class="bg-purple-700 p-2 rounded text-sm">
+                    <option value="uz">O‘zbek</option>
+                    <option value="ru">Русский</option>
+                </select>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto p-4 sm:p-6">
+        <!-- Ishchilar bo‘limi -->
+        <div class="mb-6">
+            <h2 id="workers-title" class="text-lg sm:text-xl font-semibold mb-4">Ishchilar</h2>
+            <div id="worker-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- Buyurtmalar bo‘limi -->
+        <div>
+            <h2 id="orders-title" class="text-lg sm:text-xl font-semibold mb-4">Buyurtmalar</h2>
+            <div id="order-list" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <script>
+        // Tarjimalar
+        const translations = {
+            uz: {
+                'workers': 'Ishchilar',
+                'no-workers': 'Hozirda ishchilar yo‘q',
+                'orders': 'Buyurtmalar',
+                'no-orders': 'Hozirda buyurtmalar yo‘q',
+                'new-worker': 'Yangi ishchi qo‘shildi!',
+                'new-order': 'Yangi buyurtma!',
+                'phone': 'Telefon',
+                'transport': 'Transport',
+                'date': 'Sana'
+            },
+            ru: {
+                'workers': 'Работники',
+                'no-workers': 'На данный момент работников нет',
+                'orders': 'Заказы',
+                'no-orders': 'На данный момент заказов нет',
+                'new-worker': 'Добавлен новый работник!',
+                'new-order': 'Новый заказ!',
+                'phone': 'Телефон',
+                'transport': 'Транспорт',
+                'date': 'Дата'
+            }
+        };
+
+        let currentLang = localStorage.getItem('language') || 'uz';
+        const languageSelect = document.getElementById('language');
+        const workerList = document.getElementById('worker-list');
+        const orderList = document.getElementById('order-list');
+        let couriers = JSON.parse(localStorage.getItem('couriers')) || [];
+        let orders = JSON.parse(localStorage.getItem('orders')) || [];
+
+        // Tilni o‘zgartirish
+        languageSelect.value = currentLang;
+        languageSelect.addEventListener('change', () => {
+            currentLang = languageSelect.value;
+            localStorage.setItem('language', currentLang);
+            updateUI();
+        });
+
+        // Interfeysni yangilash
+        function updateUI() {
+            document.getElementById('workers-title').textContent = translations[currentLang]['workers'];
+            document.getElementById('orders-title').textContent = translations[currentLang]['orders'];
+            displayWorkers();
+            displayOrders();
+        }
+
+        // Ishchilarni ko‘rsatish
+        function displayWorkers() {
+            workerList.innerHTML = couriers.length === 0 ? `<p class="text-center text-gray-500 text-sm">${translations[currentLang]['no-workers']}</p>` : '';
+            couriers.forEach(courier => {
+                const workerElement = document.createElement('div');
+                workerElement.className = 'bg-white rounded-lg shadow p-3 sm:p-4';
+                workerElement.innerHTML = `
+                    <p class="font-semibold text-sm sm:text-base">${courier.firstName} ${courier.lastName}</p>
+                    <p class="text-xs sm:text-sm"><strong>${translations[currentLang]['phone']}:</strong> ${courier.phone}</p>
+                    <p class="text-xs sm:text-sm"><strong>${translations[currentLang]['transport']}:</strong> ${courier.transport}</p>
+                    <p class="text-xs text-gray-500">${translations[currentLang]['date']}: ${courier.date}</p>
+                `;
+                workerList.appendChild(workerElement);
+            });
+        }
+
+        // Buyurtmalarni ko‘rsatish
+        function displayOrders() {
+            orderList.innerHTML = orders.length === 0 ? `<p class="text-center text-gray-500 text-sm">${translations[currentLang]['no-orders']}</p>` : '';
+            orders.forEach(order => {
+                const orderElement = document.createElement('div');
+                orderElement.className = 'bg-white rounded-lg shadow p-3 sm:p-4';
+                orderElement.innerHTML = `
+                    <p class="font-semibold text-sm sm:text-base mb-2">${translations[currentLang]['orders']} #${order.id}</p>
+                    <div class="border-l-2 border-purple-500 pl-3 text-xs sm:text-sm">${order.receipt}</div>
+                    <p class="text-xs text-gray-500 mt-1">${translations[currentLang]['date']}: ${order.date}</p>
+                `;
+                orderList.appendChild(orderElement);
+            });
+        }
+
+        // Yangi ma’lumotlarni kuzatish
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'orderUpdate') {
+                orders = JSON.parse(localStorage.getItem('orders')) || [];
+                displayOrders();
+                if (orders.length > 0) {
+                    alert(`${translations[currentLang]['new-order']} #${orders[orders.length - 1].id}`);
+                }
+            }
+            if (event.key === 'courierUpdate') {
+                couriers = JSON.parse(localStorage.getItem('couriers')) || [];
+                displayWorkers();
+                if (couriers.length > 0) {
+                    alert(`${translations[currentLang]['new-worker']} ${couriers[couriers.length - 1].firstName} ${couriers[couriers.length - 1].lastName}`);
+                }
+            }
+        });
+
+        // Dastlabki sozlamalar
+        updateUI();
+    </script>
+</body>
+</html>

@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>SavdoGo - Mijoz Paneli</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script defer src="./node.js"></script>
+    <style>
+        body {
+            -webkit-overflow-scrolling: touch;
+            touch-action: manipulation;
+            overscroll-behavior: none;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9fafb;
+        }
+        .no-tap-highlight {
+            -webkit-tap-highlight-color: transparent;
+        }
+        button, a, input, select {
+            min-height: 48px;
+            touch-action: manipulation;
+            outline: none;
+            border-radius: 8px;
+        }
+        input:focus, select:focus {
+            outline: 2px solid #7c3aed;
+            outline-offset: 2px;
+        }
+        .grid-cols-auto {
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        }
+        @media (min-width: 640px) {
+            .grid-cols-auto {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            }
+        }
+        @media (min-width: 768px) {
+            .grid-cols-auto {
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            }
+        }
+        .modal-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 12px;
+        }
+        button:active {
+            opacity: 0.8;
+        }
+        @media (max-width: 640px) {
+            .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            h2 {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Sarlavha -->
+    <header class="bg-purple-700 text-white p-3 sticky top-0 z-20 shadow-md">
+        <div class="container mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center justify-between w-full sm:w-auto">
+                <h1 class="text-xl font-bold" data-lang="site-title">SavdoGo</h1>
+                <div class="flex items-center space-x-3">
+                    <button id="catalogToggle" class="text-white text-sm font-semibold px-3 py-2 rounded-lg hover:bg-purple-600 no-tap-highlight" data-lang="catalog">Katalog</button>
+                    <a href="#" id="cartLink" class="relative no-tap-highlight">
+                        <i class="fas fa-shopping-cart text-lg"></i>
+                        <span id="cartCount" class="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+                    </a>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                <div class="relative w-full sm:w-60">
+                    <input type="text" id="searchInput" placeholder="Mahsulot qidirish..." class="w-full py-2 px-4 rounded-full text-gray-800 focus:outline-none text-sm" data-lang-placeholder="search">
+                    <i class="fas fa-search absolute right-3 top-2.5 text-gray-500"></i>
+                </div>
+                <select id="languageSelect" class="py-2 px-3 rounded-full bg-white text-gray-800 text-sm">
+                    <option value="uz">O‘zbek</option>
+                    <option value="ru">Русский</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- Yon Menyu (Kategoriyalar) -->
+    <div id="sideMenu" class="fixed top-0 left-0 h-full w-64 bg-purple-800 text-white p-4 transform -translate-x-full transition-transform z-30">
+        <button id="closeMenu" class="mb-4 text-white focus:outline-none no-tap-highlight">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+        <h3 class="text-lg font-semibold mb-4" data-lang="categories">Kategoriyalar</h3>
+        <div class="flex flex-col space-y-2">
+            <button class="category-item text-left px-4 py-2 hover:bg-purple-700 rounded no-tap-highlight" data-category="all" data-lang="all-products">Barchasi</button>
+            <button class="category-item text-left px-4 py-2 hover:bg-purple-700 rounded no-tap-highlight" data-category="food" data-lang="food">Oziq-Ovqat</button>
+            <button class="category-item text-left px-4 py-2 hover:bg-purple-700 rounded no-tap-highlight" data-category="clothing" data-lang="clothing">Kiyimlar</button>
+            <button class="category-item text-left px-4 py-2 hover:bg-purple-700 rounded no-tap-highlight" data-category="electronics" data-lang="electronics">Elektronika</button>
+            <button class="category-item text-left px-4 py-2 hover:bg-purple-700 rounded no-tap-highlight" data-category="sports" data-lang="sports">Sport</button>
+        </div>
+    </div>
+
+    <!-- Asosiy Kontent -->
+    <main class="container mx-auto my-6 px-3 sm:px-4">
+        <h2 id="mainTitle" class="text-xl font-semibold mb-4 text-center sm:text-left" data-lang="popular-products">Mashhur Buyumlar</h2>
+        <div id="productGrid" class="grid grid-cols-auto gap-3 sm:gap-4"></div>
+    </main>
+
+    <!-- Savat Modal -->
+    <div id="cartModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-10">
+        <div class="bg-white p-4 sm:p-6 rounded-lg w-full max-w-md modal-content">
+            <h2 class="text-lg font-semibold mb-3" data-lang="your-cart">Sizning Savatingiz</h2>
+            <div id="cartItems" class="mb-3 text-sm"></div>
+            <p id="cartTotal" class="font-semibold mb-3 text-sm">Jami: 0 UZS</p>
+            <div class="mb-3 space-y-2">
+                <input id="firstName" type="text" placeholder="Ism" class="w-full p-2 border rounded text-sm" data-lang-placeholder="first-name">
+                <input id="lastName" type="text" placeholder="Familiya" class="w-full p-2 border rounded text-sm" data-lang-placeholder="last-name">
+                <input id="address" type="text" placeholder="Manzil" class="w-full p-2 border rounded text-sm" data-lang-placeholder="address">
+                <input id="phone" type="tel" placeholder="Telefon raqami (+998)" class="w-full p-2 border rounded text-sm" data-lang-placeholder="phone">
+                <button id="verifyPhone" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-sm no-tap-highlight" data-lang="verify-phone">Telefonni tasdiqlash</button>
+                <input id="smsCode" type="text" placeholder="SMS kodni kiriting" class="w-full p-2 border rounded text-sm hidden" data-lang-placeholder="sms-code">
+            </div>
+            <div class="flex justify-end gap-2">
+                <button id="closeCart" class="bg-gray-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-600 no-tap-highlight" data-lang="close">Yopish</button>
+                <button id="checkout" class="bg-purple-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-800 no-tap-highlight" data-lang="checkout">To‘lov qilish</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- To‘lov Turi Modal -->
+    <div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-10">
+        <div class="bg-white p-4 sm:p-6 rounded-lg w-full max-w-md modal-content">
+            <h2 class="text-lg font-semibold mb-3" data-lang="payment-method">To‘lov usulini tanlang</h2>
+            <div class="flex flex-col gap-2 mb-3">
+                <button id="cashPayment" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm no-tap-highlight" data-lang="cash">Naqt pul</button>
+                <button id="cardPayment" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm no-tap-highlight" data-lang="card">Karta</button>
+            </div>
+            <div id="cardForm" class="hidden space-y-2">
+                <input id="cardNumber" type="text" placeholder="Karta raqami (16 raqam)" class="w-full p-2 border rounded text-sm" maxlength="16" data-lang-placeholder="card-number">
+                <p id="cardType" class="text-xs text-gray-600"></p>
+                <input id="cardExpiry" type="text" placeholder="MM/YY" class="w-full p-2 border rounded text-sm" maxlength="5" data-lang-placeholder="card-expiry">
+            </div>
+            <div class="flex justify-end gap-2 mt-3">
+                <button id="closePayment" class="bg-gray-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-600 no-tap-highlight" data-lang="close">Yopish</button>
+                <button id="confirmPayment" class="bg-purple-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-purple-800 hidden no-tap-highlight" data-lang="confirm-payment">To‘lovni tasdiqlash</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chek Modal -->
+    <div id="receiptModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-10">
+        <div class="bg-white p-4 sm:p-6 rounded-lg w-full max-w-md modal-content">
+            <h2 class="text-lg font-semibold mb-3" data-lang="receipt">To‘lov Cheki</h2>
+            <div id="receiptContent" class="mb-3 text-sm"></div>
+            <div class="flex justify-end">
+                <button id="closeReceipt" class="bg-gray-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-600 no-tap-highlight" data-lang="close">Yopish</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white p-4">
+        <div class="container mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <h3 class="text-lg font-semibold mb-2" data-lang="site-title">SavdoGo</h3>
+                <p class="text-gray-400 text-sm w-[200px]" data-lang="footer-about">O‘zbekistondagi eng yaxshi online savdo platformasi!</p>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold mb-2" data-lang="contact">Aloqa</h3>
+                <a class="text-gray-400 inline-flex items-center gap-2 text-sm" href="https://t.me/Asad_t1010" target="_blank">Telegram: @Asad_t1010</a>
+                <p class="text-gray-400 text-sm">Telefon: +998 (93)-857-33-11</p>
+            </div>
+        </div>
+        <p class="text-center text-gray-400 mt-4 text-sm" data-lang="copyright">© 2025 SavdoGo. Barcha huquqlar himoyalangan.</p>
+    </footer>
+
+    <script>
+        // Til ma'lumotlari
+        const translations = {
+            uz: {
+                'site-title': 'SavdoGo',
+                'catalog': 'Katalog',
+                'cart': 'Savat',
+                'search': 'Mahsulot qidirish...',
+                'categories': 'Kategoriyalar',
+                'all-products': 'Barchasi',
+                'food': 'Oziq-Ovqat',
+                'clothing': 'Kiyimlar',
+                'electronics': 'Elektronika',
+                'sports': 'Sport',
+                'popular-products': 'Mashhur Buyumlar',
+                'your-cart': 'Sizning Savatingiz',
+                'first-name': 'Ism',
+                'last-name': 'Familiya',
+                'address': 'Manzil',
+                'phone': 'Telefon raqami (+998)',
+                'verify-phone': 'Telefonni tasdiqlash',
+                'sms-code': 'SMS kodni kiriting',
+                'close': 'Yopish',
+                'checkout': 'To‘lov qilish',
+                'payment-method': 'To‘lov usulini tanlang',
+                'cash': 'Naqt pul',
+                'card': 'Karta',
+                'card-number': 'Karta raqami (16 raqam)',
+                'card-expiry': 'MM/YY',
+                'confirm-payment': 'To‘lovni tasdiqlash',
+                'receipt': 'To‘lov Cheki',
+                'footer-about': 'O‘zbekistondagi eng yaxshi online savdo platformasi!',
+                'contact': 'Aloqa',
+                'copyright': '© 2025 SavdoGo. Barcha huquqlar himoyalangan.',
+                'invalid-card': 'Bunday karta mavjud emas!',
+                'invalid-card-number': 'Karta raqami 16 raqamdan iborat bo‘lishi kerak!',
+                'invalid-expiry': 'MM/YY formatida kiriting!',
+                'card-type': 'Karta turi',
+                'empty-cart': 'Savat bo‘sh!',
+                'fill-all': 'Iltimos, barcha maydonlarni to‘ldiring!',
+                'invalid-phone': 'Iltimos, to‘g‘ri telefon raqami kiriting (+998 formatida)!',
+                'invalid-sms-code': 'Iltimos, to‘g‘ri SMS kodni kiriting!',
+                'sms-code-sent': 'Sizning SMS kodingiz',
+                'add-to-cart': 'Savatga qo‘shish',
+                'added-to-cart': 'savatga qo‘shildi!',
+                'total': 'Jami',
+                'order': 'Buyurtma',
+                'date': 'Sana'
+            },
+            ru: {
+                'site-title': 'SavdoGo',
+                'catalog': 'Каталог',
+                'cart': 'Корзина',
+                'search': 'Поиск товаров...',
+                'categories': 'Категории',
+                'all-products': 'Все',
+                'food': 'Еда',
+                'clothing': 'Одежда',
+                'electronics': 'Электроника',
+                'sports': 'Спорт',
+                'popular-products': 'Популярные товары',
+                'your-cart': 'Ваша корзина',
+                'first-name': 'Имя',
+                'last-name': 'Фамилия',
+                'address': 'Адрес',
+                'phone': 'Номер телефона (+998)',
+                'verify-phone': 'Подтвердить телефон',
+                'sms-code': 'Введите SMS-код',
+                'close': 'Закрыть',
+                'checkout': 'Оформить заказ',
+                'payment-method': 'Выберите способ оплаты',
+                'cash': 'Наличные',
+                'card': 'Карта',
+                'card-number': 'Номер карты (16 цифр)',
+                'card-expiry': 'MM/YY',
+                'confirm-payment': 'Подтвердить оплату',
+                'receipt': 'Чек оплаты',
+                'footer-about': 'Лучшая платформа для онлайн-шопинга в Узбекистане!',
+                'contact': 'Контакты',
+                'copyright': '© 2025 SavdoGo. Все права защищены.',
+                'invalid-card': 'Такая карта не существует!',
+                'invalid-card-number': 'Номер карты должен состоять из 16 цифр!',
+                'invalid-expiry': 'Введите в формате MM/YY!',
+                'card-type': 'Тип карты',
+                'empty-cart': 'Корзина пуста!',
+                'fill-all': 'Пожалуйста, заполните все поля!',
+                'invalid-phone': 'Пожалуйста, введите правильный номер телефона (+998)!',
+                'invalid-sms-code': 'Пожалуйста, введите правильный SMS-код!',
+                'sms-code-sent': 'Ваш SMS-код',
+                'add-to-cart': 'Добавить в корзину',
+                'added-to-cart': 'добавлено в корзину!',
+                'total': 'Итого',
+                'order': 'Заказ',
+                'date': 'Дата'
+            }
+        };
+
+        // Mahsulotlar ro‘yxati
+        const productData = [
+            { id: '1', title: { uz: "Sushi Roll", ru: "Суши-ролл" }, price: 45000, category: "food", rating: 5, reviews: 250, image: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c" },
+            { id: '2', title: { uz: "Burger", ru: "Бургер" }, price: 25000, category: "food", rating: 4, reviews: 123, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd" },
+            { id: '3', title: { uz: "Futbolka", ru: "Футболка" }, price: 120000, category: "clothing", rating: 4, reviews: 200, image: "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a" },
+            { id: '4', title: { uz: "Smartfon", ru: "Смартфон" }, price: 2500000, category: "electronics", rating: 5, reviews: 150, image: "https://images.unsplash.com/photo-1598327105666-5b89351aff97" },
+            { id: '5', title: { uz: "Pizza", ru: "Пицца" }, price: 60000, category: "food", rating: 5, reviews: 300, image: "https://images.unsplash.com/photo-1513104890138-7c749659a591" },
+            { id: '6', title: { uz: "Sport Shim", ru: "Спортивные штаны" }, price: 150000, category: "sports", rating: 4, reviews: 80, image: "https://images.unsplash.com/photo-1596357395217-80de13130e92" },
+            { id: '7', title: { uz: "Naushnik", ru: "Наушники" }, price: 300000, category: "electronics", rating: 4, reviews: 120, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e" },
+            { id: '8', title: { uz: "Krossovka", ru: "Кроссовки" }, price: 450000, category: "clothing", rating: 5, reviews: 90, image: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519" },
+            { id: '9', title: { uz: "Salat", ru: "Салат" }, price: 20000, category: "food", rating: 4, reviews: 60, image: "https://images.unsplash.com/photo-1512621776951-a57141f9eefd" },
+            { id: '10', title: { uz: "Velosiped", ru: "Велосипед" }, price: 1500000, category: "sports", rating: 5, reviews: 45, image: "https://images.unsplash.com/photo-1485965120184-e220f721d03e" }
+        ];
+
+        // Savat va profil
+        let cart = JSON.parse(localStorage.getItem('cart')) || [];
+        let clientProfile = JSON.parse(localStorage.getItem('clientProfile')) || null;
+        let currentLang = localStorage.getItem('language') || 'uz';
+        let generatedSMSCode = '';
+
+        // DOM elementlari
+        const productGrid = document.getElementById('productGrid');
+        const searchInput = document.getElementById('searchInput');
+        const categoryFilters = document.querySelectorAll('.category-item');
+        const cartLink = document.getElementById('cartLink');
+        const cartCount = document.getElementById('cartCount');
+        const cartModal = document.getElementById('cartModal');
+        const cartItems = document.getElementById('cartItems');
+        const cartTotal = document.getElementById('cartTotal');
+        const closeCart = document.getElementById('closeCart');
+        const checkout = document.getElementById('checkout');
+        const firstNameInput = document.getElementById('firstName');
+        const lastNameInput = document.getElementById('lastName');
+        const addressInput = document.getElementById('address');
+        const phoneInput = document.getElementById('phone');
+        const verifyPhone = document.getElementById('verifyPhone');
+        const smsCodeInput = document.getElementById('smsCode');
+        const paymentModal = document.getElementById('paymentModal');
+        const cashPayment = document.getElementById('cashPayment');
+        const cardPayment = document.getElementById('cardPayment');
+        const cardForm = document.getElementById('cardForm');
+        const cardNumberInput = document.getElementById('cardNumber');
+        const cardTypeLabel = document.getElementById('cardType');
+        const cardExpiryInput = document.getElementById('cardExpiry');
+        const closePayment = document.getElementById('closePayment');
+        const confirmPayment = document.getElementById('confirmPayment');
+        const receiptModal = document.getElementById('receiptModal');
+        const receiptContent = document.getElementById('receiptContent');
+        const closeReceipt = document.getElementById('closeReceipt');
+        const catalogToggle = document.getElementById('catalogToggle');
+        const closeMenu = document.getElementById('closeMenu');
+        const sideMenu = document.getElementById('sideMenu');
+        const languageSelect = document.getElementById('languageSelect');
+
+        // Profil ma'lumotlarini yuklash
+        function loadProfile() {
+            if (clientProfile) {
+                firstNameInput.value = clientProfile.firstName || '';
+                lastNameInput.value = clientProfile.lastName || '';
+                addressInput.value = clientProfile.address || '';
+                phoneInput.value = clientProfile.phone || '';
+            }
+        }
+
+        // Tilni yangilash
+        function updateLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            document.querySelectorAll('[data-lang]').forEach(el => {
+                el.textContent = translations[lang][el.getAttribute('data-lang')] || el.getAttribute('data-lang');
+            });
+            document.querySelectorAll('[data-lang-placeholder]').forEach(el => {
+                el.placeholder = translations[lang][el.getAttribute('data-lang-placeholder')] || '';
+            });
+            displayProducts(productData);
+            updateCart();
+        }
+
+        // Mahsulotlarni ko‘rsatish
+        function displayProducts(products) {
+            productGrid.innerHTML = '';
+            products.forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow p-3 hover:shadow-lg transition';
+                card.innerHTML = `
+                    <img src="${product.image}" alt="${product.title[currentLang]}" class="w-full h-36 object-cover rounded">
+                    <h3 class="text-sm font-semibold mt-2 truncate">${product.title[currentLang]}</h3>
+                    <p class="text-gray-600 text-xs">${product.price.toLocaleString()} UZS</p>
+                    <div class="flex items-center mt-1">
+                        <span class="text-yellow-400 text-xs">${'★'.repeat(product.rating)}${'☆'.repeat(5 - product.rating)}</span>
+                        <span class="text-gray-500 text-xs ml-1">(${product.reviews})</span>
+                    </div>
+                    <button class="add-to-cart mt-2 w-full bg-purple-700 text-white py-2 rounded-lg hover:bg-purple-800 text-sm no-tap-highlight" data-id="${product.id}" data-lang="add-to-cart">${translations[currentLang]['add-to-cart']}</button>
+                `;
+                productGrid.appendChild(card);
+            });
+        }
+
+        // Savatga qo‘shish
+        productGrid.addEventListener('click', (event) => {
+            if (event.target.classList.contains('add-to-cart')) {
+                const productId = event.target.getAttribute('data-id');
+                const product = productData.find(item => item.id === productId);
+                const cartItem = cart.find(item => item.id === productId);
+                if (cartItem) {
+                    cartItem.quantity += 1;
+                } else {
+                    cart.push({ ...product, quantity: 1 });
+                }
+                localStorage.setItem('cart', JSON.stringify(cart));
+                updateCart();
+                alert(`${product.title[currentLang]} ${translations[currentLang]['added-to-cart']}`);
+            }
+        });
+
+        // Savatni yangilash
+        function updateCart() {
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            cartCount.textContent = totalItems;
+            cartItems.innerHTML = '';
+            let total = 0;
+            cart.forEach(item => {
+                total += item.price * item.quantity;
+                const itemElement = document.createElement('div');
+                itemElement.className = 'flex justify-between mb-2 text-sm';
+                itemElement.innerHTML = `
+                    <span>${item.title[currentLang]} (x${item.quantity})</span>
+                    <span>${(item.price * item.quantity).toLocaleString()} UZS</span>
+                `;
+                cartItems.appendChild(itemElement);
+            });
+            cartTotal.textContent = `${translations[currentLang]['total']}: ${total.toLocaleString()} UZS`;
+        }
+
+        // SMS kod generatsiyasi
+        function generateSMSCode() {
+            return Math.floor(1000 + Math.random() * 9000).toString();
+        }
+
+        // Karta turini aniqlash
+        function detectCardType(number) {
+            const firstDigit = number.charAt(0);
+            return firstDigit === '4' ? 'Visa' : firstDigit === '8' ? 'Uzcard' : firstDigit === '9' ? 'Humo' : null;
+        }
+
+        // Chekni ko‘rsatish va kuryerga yuborish
+        function showReceipt(paymentMethod) {
+            let total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+            const receiptText = `
+                <p><strong>${translations[currentLang]['first-name']}:</strong> ${firstNameInput.value}</p>
+                <p><strong>${translations[currentLang]['last-name']}:</strong> ${lastNameInput.value}</p>
+                <p><strong>${translations[currentLang]['address']}:</strong> ${addressInput.value}</p>
+                <p><strong>${translations[currentLang]['phone']}:</strong> ${phoneInput.value}</p>
+                <p><strong>${translations[currentLang]['payment-method']}:</strong> ${paymentMethod}</p>
+                <hr class="my-2">
+                <h3 class="text-sm font-semibold mb-2">${translations[currentLang]['order']}:</h3>
+                ${cart.map(item => `
+                    <div class="flex justify-between mb-1 text-xs">
+                        <span>${item.title[currentLang]} (x${item.quantity})</span>
+                        <span>${(item.price * item.quantity).toLocaleString()} UZS</span>
+                    </div>
+                `).join('')}
+                <p class="font-semibold mt-2 text-sm">${translations[currentLang]['total']}: ${total.toLocaleString()} UZS</p>
+                <p class="text-xs text-gray-500 mt-1">${translations[currentLang]['date']}: ${new Date().toLocaleString('uz')}</p>
+            `;
+            receiptContent.innerHTML = receiptText;
+            receiptModal.classList.remove('hidden');
+            paymentModal.classList.add('hidden');
+            cartModal.classList.add('hidden');
+
+            // Profilni saqlash
+            clientProfile = {
+                firstName: firstNameInput.value,
+                lastName: lastNameInput.value,
+                address: addressInput.value,
+                phone: phoneInput.value
+            };
+            localStorage.setItem('clientProfile', JSON.stringify(clientProfile));
+
+            // Buyurtma ma'lumotlari kuryer platformasiga
+            const orderData = {
+                id: Date.now(),
+                receipt: receiptText,
+                date: new Date().toLocaleString('uz')
+            };
+
+            // Kuryer platformasiga yuborish
+            let courierOrders = JSON.parse(localStorage.getItem('orders')) || [];
+            courierOrders.push(orderData);
+            localStorage.setItem('orders', JSON.stringify(courierOrders));
+            localStorage.setItem('orderUpdate', Date.now().toString());
+
+            alert('Buyurtma va chek kuryerga yuborildi!');
+            resetCartAndForm();
+        }
+
+        // Savatni tozalash
+        function resetCartAndForm() {
+            cart = [];
+            localStorage.setItem('cart', JSON.stringify(cart));
+            smsCodeInput.value = '';
+            smsCodeInput.classList.add('hidden');
+            cardNumberInput.value = '';
+            cardExpiryInput.value = '';
+            cardTypeLabel.textContent = '';
+            cardForm.classList.add('hidden');
+            confirmPayment.classList.add('hidden');
+            updateCart();
+        }
+
+        // Telefon tasdiqlash
+        verifyPhone.addEventListener('click', () => {
+            if (phoneInput.value.match(/^\+998\d{9}$/)) {
+                generatedSMSCode = generateSMSCode();
+                smsCodeInput.classList.remove('hidden');
+                alert(`${translations[currentLang]['sms-code-sent']}: ${generatedSMSCode}`);
+            } else {
+                alert(translations[currentLang]['invalid-phone']);
+            }
+        });
+
+        // Karta raqami
+        cardNumberInput.addEventListener('input', () => {
+            const number = cardNumberInput.value.replace(/\D/g, '');
+            const type = detectCardType(number);
+            cardTypeLabel.textContent = type ? `${translations[currentLang]['card-type']}: ${type}` : number.length >= 4 ? translations[currentLang]['invalid-card'] : '';
+        });
+
+        // Karta muddati
+        cardExpiryInput.addEventListener('input', () => {
+            let value = cardExpiryInput.value.replace(/\D/g, '');
+            if (value.length > 2) value = value.slice(0, 2) + '/' + value.slice(2, 4);
+            cardExpiryInput.value = value;
+        });
+
+        // To‘lov usuli
+        cashPayment.addEventListener('click', () => {
+            cardForm.classList.add('hidden');
+            confirmPayment.classList.remove('hidden');
+            confirmPayment.onclick = () => showReceipt(translations[currentLang]['cash']);
+        });
+
+        cardPayment.addEventListener('click', () => {
+            cardForm.classList.remove('hidden');
+            confirmPayment.classList.remove('hidden');
+            confirmPayment.onclick = () => {
+                if (!cardNumberInput.value.match(/^\d{16}$/)) {
+                    alert(translations[currentLang]['invalid-card-number']);
+                    return;
+                }
+                if (!cardExpiryInput.value.match(/^\d{2}\/\d{2}$/)) {
+                    alert(translations[currentLang]['invalid-expiry']);
+                    return;
+                }
+                const cardType = detectCardType(cardNumberInput.value);
+                if (!cardType) {
+                    alert(translations[currentLang]['invalid-card']);
+                    return;
+                }
+                showReceipt(cardType);
+            };
+        });
+
+        // Qidiruv
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase();
+            const filteredProducts = productData.filter(product => product.title[currentLang].toLowerCase().includes(query));
+            displayProducts(filteredProducts);
+        });
+
+        // Kategoriya filtrlari
+        categoryFilters.forEach(button => {
+            button.addEventListener('click', () => {
+                const category = button.getAttribute('data-category');
+                const filteredProducts = category === 'all' ? productData : productData.filter(product => product.category === category);
+                displayProducts(filteredProducts);
+                sideMenu.classList.add('-translate-x-full');
+            });
+        });
+
+        // Savat modalini ochish/yopish
+        cartLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadProfile();
+            cartModal.classList.toggle('flex');
+            cartModal.classList.toggle('hidden');
+        });
+
+        closeCart.addEventListener('click', () => cartModal.classList.add('hidden'));
+
+        // To‘lov modalini ochish
+        checkout.addEventListener('click', () => {
+            if (cart.length === 0) {
+                alert(translations[currentLang]['empty-cart']);
+            } else if (!firstNameInput.value || !lastNameInput.value || !addressInput.value || !phoneInput.value) {
+                alert(translations[currentLang]['fill-all']);
+            } else if (!phoneInput.value.match(/^\+998\d{9}$/)) {
+                alert(translations[currentLang]['invalid-phone']);
+            } else if (!smsCodeInput.value || smsCodeInput.value !== generatedSMSCode) {
+                alert(translations[currentLang]['invalid-sms-code']);
+            } else {
+                paymentModal.classList.remove('hidden');
+                cartModal.classList.add('hidden');
+            }
+        });
+
+        closePayment.addEventListener('click', () => {
+            paymentModal.classList.add('hidden');
+            cardForm.classList.add('hidden');
+            confirmPayment.classList.add('hidden');
+        });
+
+        // Chek modalini yopish
+        closeReceipt.addEventListener('click', () => receiptModal.classList.add('hidden'));
+
+        // Yon menyuni ochish/yopish
+        catalogToggle.addEventListener('click', () => sideMenu.classList.toggle('-translate-x-full'));
+        closeMenu.addEventListener('click', () => sideMenu.classList.add('-translate-x-full'));
+
+        // Til o‘zgartirish
+        languageSelect.addEventListener('change', () => updateLanguage(languageSelect.value));
+
+        // Modalni tashqariga bosish
+        [cartModal, paymentModal, receiptModal].forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.classList.add('hidden');
+            });
+        });
+
+        // Escape tugmasi
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                cartModal.classList.add('hidden');
+                paymentModal.classList.add('hidden');
+                receiptModal.classList.add('hidden');
+                sideMenu.classList.add('-translate-x-full');
+            }
+        });
+        {
+  id: Date.now(); // Noyob ID (vaqt tamg‘asi)
+  receipt: "<p><strong>Ism:</strong> Mijoz ismi</p>..."; // Chek matni
+  date: new Date().toLocaleString('uz') // Sana va vaqt
+}
+localStorage.clear();
+console.log(localStorage.getItem('orders'));
+
+        // Dastlabki sozlamalar
+        languageSelect.value = currentLang;
+        updateLanguage(currentLang);
+        displayProducts(productData);
+        loadProfile();
+    </script>
+</body>
+</html>
